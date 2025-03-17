@@ -269,11 +269,35 @@
     }
 
     function copyUrlToClipboard() {
-      navigator.clipboard.writeText(fileUrl).then(() => {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(fileUrl).then(() => {
+          showToast();
+        }).catch(err => {
+          console.error('Failed to copy URL using clipboard API: ', err);
+          fallbackCopyToClipboard(fileUrl);
+        });
+      } else {
+        console.warn('Clipboard API not available, using fallback method.');
+        fallbackCopyToClipboard(fileUrl);
+      }
+    }
+
+    function fallbackCopyToClipboard(text) {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed'; // Prevent scrolling to the bottom of the page
+      textarea.style.opacity = '0'; // Make it invisible
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      try {
+        document.execCommand('copy');
         showToast();
-      }).catch(err => {
-        console.error('Failed to copy URL: ', err);
-      });
+      } catch (err) {
+        console.error('Fallback copy failed: ', err);
+      } finally {
+        document.body.removeChild(textarea);
+      }
     }
 
     async function uploadFile() {
