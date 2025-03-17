@@ -4,15 +4,101 @@
   <meta charset="UTF-8">
   <title>S3 Upload Example</title>
   <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
+      background-color: #f5f7fa;
+      padding: 20px;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+
+    .container {
+      background-color: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      color: #333;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .upload-area {
+      border: 2px dashed #ddd;
+      border-radius: 8px;
+      padding: 40px 20px;
+      text-align: center;
+      margin-bottom: 20px;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .upload-area.drag-over {
+      border-color: #4a90e2;
+      background-color: rgba(74, 144, 226, 0.1);
+    }
+
+    .upload-area i {
+      font-size: 48px;
+      color: #aaa;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .file-input-container {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 15px;
+    }
+
+    #fileInput {
+      display: none;
+    }
+
+    .upload-btn, .browse-btn {
+      background-color: #4a90e2;
+      color: white;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 500;
+      transition: background-color 0.3s;
+      margin: 0 5px;
+    }
+
+    .upload-btn:hover, .browse-btn:hover {
+      background-color: #3a7bc8;
+    }
+
+    .upload-btn:disabled {
+      background-color: #aaa;
+      cursor: not-allowed;
+    }
+
+    #status {
+      margin: 15px 0;
+      padding: 10px;
+      background-color: #f8f8f8;
+      border-radius: 4px;
+      min-height: 20px;
+    }
+
     .error {
-      color: red;
+      color: #e74c3c;
       margin-top: 10px;
       white-space: pre-wrap;
       font-family: monospace;
     }
-    #status {
-      margin: 10px 0;
-    }
+
     #errorDetails {
       background-color: #f8f8f8;
       border: 1px solid #ddd;
@@ -21,33 +107,187 @@
       max-height: 200px;
       overflow: auto;
       display: none;
+      border-radius: 4px;
+    }
+
+    .toast {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: #4a90e2;
+      color: white;
+      padding: 12px 24px;
+      border-radius: 4px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      opacity: 0;
+      transition: opacity 0.3s, transform 0.3s;
+      transform: translateY(20px);
+      z-index: 1000;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .file-info {
+      margin-top: 10px;
+      color: #666;
+    }
+
+    .result-container {
+      display: none;
+      margin-top: 20px;
+      padding: 15px;
+      background-color: #f1f9f1;
+      border-radius: 4px;
+      border-left: 4px solid #52c41a;
+    }
+
+    .copy-url-btn {
+      background-color: #52c41a;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 10px;
+      font-weight: 500;
+      transition: background-color 0.3s;
+    }
+
+    .copy-url-btn:hover {
+      background-color: #49ad17;
+    }
+
+    .file-url {
+      word-break: break-all;
+      padding: 8px;
+      background-color: white;
+      border-radius: 4px;
+      border: 1px solid #ddd;
+      margin-top: 10px;
+      font-family: monospace;
     }
   </style>
 </head>
 <body>
-  <input type="file" id="fileInput">
-  <button onclick="uploadFile()">Upload</button>
-  <div id="status"></div>
-  <div id="errorDetails" class="error"></div>
+  <div class="container">
+    <h1>S3 File Upload</h1>
+
+    <div id="upload-area" class="upload-area">
+      <i>📁</i>
+      <p>Drag and drop files here or</p>
+      <div class="file-input-container">
+        <button class="browse-btn" onclick="document.getElementById('fileInput').click()">Browse Files</button>
+      </div>
+      <input type="file" id="fileInput">
+      <div class="file-info" id="file-info"></div>
+    </div>
+
+    <button id="uploadBtn" class="upload-btn" onclick="uploadFile()" disabled>Upload File</button>
+
+    <div id="status"></div>
+    <div id="errorDetails" class="error"></div>
+
+    <div id="result-container" class="result-container">
+      <h3>Upload Success! ✅</h3>
+      <p>Your file URL:</p>
+      <div id="fileUrl" class="file-url"></div>
+      <button id="copyUrlBtn" class="copy-url-btn" onclick="copyUrlToClipboard()">Copy URL to clipboard</button>
+    </div>
+  </div>
+
+  <div id="toast" class="toast">URL copied to clipboard!</div>
 
   <script>
-    async function uploadFile() {
-      console.log('Uploading file...');
-      const fileInput = document.getElementById('fileInput');
-      const statusElement = document.getElementById('status');
-      const errorDetailsElement = document.getElementById('errorDetails');
-      const file = fileInput.files[0];
+    // Element references
+    const uploadArea = document.getElementById('upload-area');
+    const fileInput = document.getElementById('fileInput');
+    const uploadBtn = document.getElementById('uploadBtn');
+    const fileInfoElement = document.getElementById('file-info');
+    const statusElement = document.getElementById('status');
+    const errorDetailsElement = document.getElementById('errorDetails');
+    const resultContainer = document.getElementById('result-container');
+    const fileUrlElement = document.getElementById('fileUrl');
+    const toast = document.getElementById('toast');
 
-      // Reset error display
+    // File data
+    let selectedFile = null;
+    let fileUrl = '';
+
+    // Drag and drop functionality
+    uploadArea.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      uploadArea.classList.add('drag-over');
+    });
+
+    uploadArea.addEventListener('dragleave', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+    });
+
+    uploadArea.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadArea.classList.remove('drag-over');
+      const files = e.dataTransfer.files;
+      if (files.length > 0) {
+        handleFileSelection(files[0]);
+      }
+    });
+
+    fileInput.addEventListener('change', (e) => {
+      if (fileInput.files.length > 0) {
+        handleFileSelection(fileInput.files[0]);
+      }
+    });
+
+    function handleFileSelection(file) {
+      selectedFile = file;
+      fileInfoElement.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+      uploadBtn.disabled = false;
+
+      // Reset UI
+      resultContainer.style.display = 'none';
+      statusElement.textContent = '';
       errorDetailsElement.style.display = 'none';
-      errorDetailsElement.textContent = '';
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes === 0) return '0 Bytes';
+      const k = 1024;
+      const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }
+
+    function showToast() {
+      toast.classList.add('show');
+      setTimeout(() => {
+        toast.classList.remove('show');
+      }, 3000);
+    }
+
+    function copyUrlToClipboard() {
+      navigator.clipboard.writeText(fileUrl).then(() => {
+        showToast();
+      }).catch(err => {
+        console.error('Failed to copy URL: ', err);
+      });
+    }
+
+    async function uploadFile() {
+      const file = selectedFile;
 
       if (!file) {
         alert('Please select a file');
         return;
       }
 
+      // Disable the upload button and update status
+      uploadBtn.disabled = true;
       statusElement.textContent = "Uploading...";
+      resultContainer.style.display = 'none';
 
       try {
         // Fetch the API response from your actual endpoint
@@ -147,9 +387,21 @@
         });
 
         if (result.ok) {
-          statusElement.textContent = `アップロード成功! ファイルキー: ${key}`;
+          // Generate a file URL for the uploaded file (using bucket URL + key)
+          const bucketUrl = uploadURL.split('?')[0];
+          fileUrl = bucketUrl;
+          fileUrl = fileUrl.replace('https://s3publiccontentsstack-uploadbucketd2c1da78-yz1ifvklacyu.s3.ap-northeast-1.amazonaws.com', 'https://dqm544bgjj9ji.cloudfront.net');
+
+          statusElement.textContent = `アップロード成功!`;
           console.log("Upload successful");
           errorDetailsElement.style.display = 'none';
+
+          // Show result container with the file URL
+          fileUrlElement.textContent = fileUrl;
+          resultContainer.style.display = 'block';
+
+          // Automatically copy URL to clipboard
+          copyUrlToClipboard();
         } else {
           let responseText = '';
           try {
@@ -171,28 +423,30 @@
         }
       } catch (error) {
         displayError('アップロード処理中にエラーが発生しました', error);
+      } finally {
+        uploadBtn.disabled = false;
+      }
+    }
+
+    function displayError(message, error, details = {}) {
+      console.error('Error:', message, error, details);
+      statusElement.textContent = message;
+
+      let errorDetails = `エラー: ${message}\n\n`;
+
+      if (error) {
+        errorDetails += `エラーメッセージ: ${error.message}\n`;
+        if (error.stack) {
+          errorDetails += `スタックトレース: ${error.stack}\n\n`;
+        }
       }
 
-      function displayError(message, error, details = {}) {
-        console.error('Error:', message, error, details);
-        statusElement.textContent = message;
-
-        let errorDetails = `エラー: ${message}\n\n`;
-
-        if (error) {
-          errorDetails += `エラーメッセージ: ${error.message}\n`;
-          if (error.stack) {
-            errorDetails += `スタックトレース: ${error.stack}\n\n`;
-          }
-        }
-
-        if (Object.keys(details).length > 0) {
-          errorDetails += `詳細情報:\n${JSON.stringify(details, null, 2)}`;
-        }
-
-        errorDetailsElement.textContent = errorDetails;
-        errorDetailsElement.style.display = 'block';
+      if (Object.keys(details).length > 0) {
+        errorDetails += `詳細情報:\n${JSON.stringify(details, null, 2)}`;
       }
+
+      errorDetailsElement.textContent = errorDetails;
+      errorDetailsElement.style.display = 'block';
     }
   </script>
 </body>
