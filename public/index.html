@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>S3 Upload Example</title>
+  <style>
+    .error {
+      color: red;
+      margin-top: 10px;
+      white-space: pre-wrap;
+      font-family: monospace;
+    }
+    #status {
+      margin: 10px 0;
+    }
+    #errorDetails {
+      background-color: #f8f8f8;
+      border: 1px solid #ddd;
+      padding: 10px;
+      margin-top: 10px;
+      max-height: 200px;
+      overflow: auto;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <input type="file" id="fileInput">
+  <button onclick="uploadFile()">Upload</button>
+  <div id="status"></div>
+  <div id="errorDetails" class="error"></div>
+
+  <script>
+    async function uploadFile() {
+      console.log('Uploading file...');
+      const fileInput = document.getElementById('fileInput');
+      const statusElement = document.getElementById('status');
+      const errorDetailsElement = document.getElementById('errorDetails');
+      const file = fileInput.files[0];
+
+      // Reset error display
+      errorDetailsElement.style.display = 'none';
+      errorDetailsElement.textContent = '';
+
+      if (!file) {
+        alert('Please select a file');
+        return;
+      }
+
+      statusElement.textContent = "Uploading...";
+
+      try {
+        // Fetch the API response from your actual endpoint
+        const apiUrl = 'https://fa2fmggv9i.execute-api.ap-northeast-1.amazonaws.com/prod/upload';
+        statusElement.textContent = "Getting upload URL...";
+        const apiResponse = await fetch(apiUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            key: file.name,
+            fileType: file.type,
+            expires: 3600
+          })
+        });
+
+        console.log('API response:', apiResponse);
+
+        if (!apiResponse.ok) {
+          let errorText = `APIリクエスト失敗: ${apiResponse.status} ${apiResponse.statusText}`;
+          let errorDetails = {};
+          console.log('API response:', apiResponse);
+          console.log(errorText);
+          try {
+            const errorBody = await apiResponse.json();
+            errorDetails = errorBody;
+            errorText += `\n詳細: ${JSON.stringify(errorBody, null, 2)}`;
+          } catch (e) {
+            errorText += '\nレスポンスボディの取得に失敗しました';
+          }
+          displayError(errorText, null, {
+            status: apiResponse.status,
+            statusText: apiResponse.statusText,
+            details: errorDetails
+          });
+          return;
+        }
+
+        let apiData;
+        try {
+          apiData = await apiResponse.json();
+        } catch (parseError) {
+          displayError('APIレスポンスの解析に失敗しました', parseError, apiResponse);
+          return;
+        }
+
+        // Check if 'body' is a string and parse it if needed
+        let responseData;
+        try {
+          if (typeof apiData.body === 'string') {
+            responseData = JSON.parse(apiData.body);
+          } else {
+            responseData = apiData.body;
+          }
+        } catch (parseError) {
+          displayError('APIレスポンスのbody解析に失敗しました', parseError, apiData);
+          return;
+        }
+
+        if (!apiData.uploadURL) {
+          displayError('APIレスポンスにuploadURLが含まれていません', null, {
+            response: apiData,
+            suggestion: 'APIサーバーの問題の可能性があります。管理者に連絡してください。'
+          });
+          return;
+        }
+
+        const uploadURL = apiData.uploadURL;
+        const key = apiData.key;
+
+        statusElement.textContent = "Got upload URL, starting upload...";
+        console.log("Uploading to:", uploadURL);
+        console.log("Key:", key);
+
+        // Add timestamp checks for expired URLs
+        try {
+          const urlParams = new URL(uploadURL).searchParams;
+          const expiresTimestamp = urlParams.get('Expires');
+          if (expiresTimestamp && parseInt(expiresTimestamp) * 1000 < Date.now()) {
+            displayError('アップロードURLの有効期限が切れています', null, {
+              expires: new Date(parseInt(expiresTimestamp) * 1000).toLocaleString(),
+              currentTime: new Date().toLocaleString()
+            });
+            return;
+          }
+        } catch (urlError) {
+          console.warn('URLの期限チェックに失敗しました:', urlError.message);
+        }
+
+        const result = await fetch(uploadURL, {
+          method: 'PUT',
+          body: file,
+          headers: {
+            'Content-Type': file.type
+          }
+        });
+
+        if (result.ok) {
+          statusElement.textContent = `アップロード成功! ファイルキー: ${key}`;
+          console.log("Upload successful");
+          errorDetailsElement.style.display = 'none';
+        } else {
+          let responseText = '';
+          try {
+            responseText = await result.text();
+          } catch (e) {
+            responseText = 'レスポンスボディの取得に失敗しました';
+          }
+
+          displayError(
+            `アップロード失敗: ${result.status} ${result.statusText}`,
+            null,
+            {
+              status: result.status,
+              statusText: result.statusText,
+              responseBody: responseText,
+              headers: Object.fromEntries([...result.headers.entries()])
+            }
+          );
+        }
+      } catch (error) {
+        displayError('アップロード処理中にエラーが発生しました', error);
+      }
+
+      function displayError(message, error, details = {}) {
+        console.error('Error:', message, error, details);
+        statusElement.textContent = message;
+
+        let errorDetails = `エラー: ${message}\n\n`;
+
+        if (error) {
+          errorDetails += `エラーメッセージ: ${error.message}\n`;
+          if (error.stack) {
+            errorDetails += `スタックトレース: ${error.stack}\n\n`;
+          }
+        }
+
+        if (Object.keys(details).length > 0) {
+          errorDetails += `詳細情報:\n${JSON.stringify(details, null, 2)}`;
+        }
+
+        errorDetailsElement.textContent = errorDetails;
+        errorDetailsElement.style.display = 'block';
+      }
+    }
+  </script>
+</body>
+</html>
