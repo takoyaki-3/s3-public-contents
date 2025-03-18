@@ -22,8 +22,8 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Synthesize CDK stack
-        run: cdk synth
+      # - name: Synthesize CDK stack
+      #   run: cdk synth
 
       # - name: Configure AWS credentials
       #   uses: aws-actions/configure-aws-credentials@v2
