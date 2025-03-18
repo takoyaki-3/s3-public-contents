@@ -170,6 +170,7 @@
       font-family: monospace;
     }
   </style>
+  <script src="//takoyaki3-auth.web.app/auth.js"></script>
 </head>
 <body>
   <div class="container">
@@ -314,13 +315,15 @@
       resultContainer.style.display = 'none';
 
       try {
+        console.log(authIdToken)
         // Fetch the API response from your actual endpoint
         const apiUrl = 'https://fa2fmggv9i.execute-api.ap-northeast-1.amazonaws.com/prod/upload';
         statusElement.textContent = "Getting upload URL...";
         const apiResponse = await fetch(apiUrl, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json'
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${authIdToken}`
           },
           body: JSON.stringify({
             key: file.name,
@@ -372,7 +375,7 @@
           return;
         }
 
-        if (!apiData.uploadURL) {
+        if (!apiData.url) {
           displayError('APIレスポンスにuploadURLが含まれていません', null, {
             response: apiData,
             suggestion: 'APIサーバーの問題の可能性があります。管理者に連絡してください。'
@@ -380,7 +383,7 @@
           return;
         }
 
-        const uploadURL = apiData.uploadURL;
+        const uploadURL = apiData.url;
         const key = apiData.key;
 
         statusElement.textContent = "Got upload URL, starting upload...";

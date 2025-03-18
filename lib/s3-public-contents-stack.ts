@@ -6,12 +6,23 @@ import * as apigateway from 'aws-cdk-lib/aws-apigateway';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins';
 import * as path from 'path';
+import * as cr from 'aws-cdk-lib/custom-resources';
+
+const prefix = 's3-public-contents';
 
 export class S3PublicContentsStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
     super(scope, id, props);
 
+    // Creating a bucket for storing layer packages
+    const layerBucket = new s3.Bucket(this, 'LayerBucket', {
+      bucketName: `${prefix}-layer-bucket-${this.stackName}`.toLowerCase(),
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      autoDeleteObjects: true,
+    });
+
     const bucket = new s3.Bucket(this, 'UploadBucket', {
+      bucketName: `${prefix}-upload-bucket-${this.stackName}`.toLowerCase(),
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE, s3.HttpMethods.HEAD],
@@ -24,22 +35,90 @@ export class S3PublicContentsStack extends cdk.Stack {
     // CloudFrontディストリビューション
     const distribution = new cloudfront.Distribution(this, 'Distribution', {
       defaultBehavior: {
-        origin: new origins.S3Origin(bucket),
+        origin: new origins.S3StaticWebsiteOrigin(bucket),
         viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
       },
     });
 
-    // Lambda関数(署名付きURL発行)
+    // Create a Lambda function to build layers
+    const buildLayerLambda = new lambda.Function(this, 'BuildLayerLambda', {
+      functionName: `${prefix}-build-layer-${this.stackName}`,
+      runtime: lambda.Runtime.PYTHON_3_9,
+      handler: 'index.handler',
+      code: lambda.Code.fromAsset(path.join(__dirname, '../build-layer-lambda')),
+      architecture: lambda.Architecture.ARM_64, // Recommended for pip binary compatibility
+      timeout: cdk.Duration.minutes(5),
+      memorySize: 1024,
+    });
+
+    // Grant the Lambda permissions to write to the layer bucket
+    layerBucket.grantWrite(buildLayerLambda);
+
+    // Create a custom resource provider
+    const buildLayerProvider = new cr.Provider(this, 'BuildLayerProvider', {
+      onEventHandler: buildLayerLambda,
+    });
+
+    // Function to create a Python layer using the custom resource
+    const createPythonLayer = (id: string, description: string, packageName: string): lambda.LayerVersion => {
+      // Create a custom resource to build the layer
+      const buildResource = new cdk.CustomResource(this, `Build${id}Resource`, {
+        serviceToken: buildLayerProvider.serviceToken,
+        resourceType: 'Custom::BuildSingleLayer',
+        properties: {
+          PackageName: packageName,
+          OutputBucket: layerBucket.bucketName,
+        },
+      });
+
+      // Get the S3 key from the custom resource response
+      const builtZipKey = buildResource.getAttString('OutputKey');
+
+      // Create a layer version from the S3 object
+      return new lambda.LayerVersion(this, id, {
+        code: lambda.Code.fromBucket(layerBucket, builtZipKey),
+        compatibleRuntimes: [lambda.Runtime.PYTHON_3_9, lambda.Runtime.PYTHON_3_13],
+        description: description,
+      });
+    };
+
+    // 各種レイヤーの作成
+    const requestsLayer = createPythonLayer(
+      'RequestsLayer',
+      'Layer containing the requests library',
+      'requests==2.32.3'
+    );
+
+    const jwtLayer = createPythonLayer(
+      'JwtLayer',
+      'Layer containing the PyJWT library',
+      'PyJWT==2.10.1'
+    );
+
+    const cryptographyLayer = createPythonLayer(
+      'CryptographyLayer',
+      'Layer containing the cryptography library',
+      'cryptography==44.0.2'
+    );
+
+    // Lambda関数（署名付きURL発行）
+    // Create the Lambda code directory and files
+    const signUrlLambdaCode = new lambda.AssetCode(path.join(__dirname, '../lambda/sign-url'));
+
+    // Lambda関数（署名付きURL発行）
     const signUrlLambda = new lambda.Function(this, 'SignUrlLambda', {
+      functionName: `${prefix}-sign-url-${this.stackName}`,
       runtime: lambda.Runtime.PYTHON_3_13,
       handler: 'index.handler',
-      code: lambda.Code.fromAsset(path.join(__dirname, '../lambda/sign-url')),
+      code: signUrlLambdaCode,
       environment: {
         BUCKET_NAME: bucket.bucketName,
+        // FIREBASE_PROJECT_ID: 'your-firebase-project-id',
       },
       timeout: cdk.Duration.seconds(3),
       architecture: lambda.Architecture.ARM_64,
       memorySize: 128,
+      layers: [requestsLayer, jwtLayer, cryptographyLayer],
     });
     bucket.grantReadWrite(signUrlLambda);
 
