@@ -170,7 +170,7 @@
       font-family: monospace;
     }
   </style>
-  <script src="//takoyaki3-auth.web.app/auth.js"></script>
+  <script src="${AUTH_SCRIPT_URL}"></script>
 </head>
 <body>
   <div class="container">
@@ -317,7 +317,7 @@
       try {
         console.log(authIdToken)
         // Fetch the API response from your actual endpoint
-        const apiUrl = 'https://fa2fmggv9i.execute-api.ap-northeast-1.amazonaws.com/prod/upload';
+        const apiUrl = '${API_ENDPOINT}';
         statusElement.textContent = "Getting upload URL...";
         const apiResponse = await fetch(apiUrl, {
           method: 'POST',
@@ -417,7 +417,7 @@
           // Generate a file URL for the uploaded file (using bucket URL + key)
           const bucketUrl = uploadURL.split('?')[0];
           fileUrl = bucketUrl;
-          fileUrl = fileUrl.replace('https://s3publiccontentsstack-uploadbucketd2c1da78-yz1ifvklacyu.s3.ap-northeast-1.amazonaws.com', 'https://dqm544bgjj9ji.cloudfront.net');
+          fileUrl = fileUrl.replace('${S3_BUCKET_URL}', '${CLOUDFRONT_URL}');
 
           statusElement.textContent = `アップロード成功!`;
           console.log("Upload successful");
