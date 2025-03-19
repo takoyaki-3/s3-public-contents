@@ -9,12 +9,12 @@ const destDir = path.resolve('dist');
 const destPath = path.join(destDir, 'index.html');
 
 /**
- * This script replaces placeholders in index.html with environment variables from .env file
- * Example .env file:
- * API_URL=https://api.example.com
- * APP_TITLE=My Application
+ * This script replaces placeholders in index.html with environment variables from GitHub Actions
+ * Example variables from CDK deploy:
+ * API_ENDPOINT: ${{ needs.deploy-aws.outputs.API_ENDPOINT }}
+ * BUCKET_NAME: ${{ needs.deploy-aws.outputs.BUCKET_NAME }}
  *
- * In index.html, use: <title>${APP_TITLE}</title> or <api-endpoint>${API_URL}</api-endpoint>
+ * In index.html, use: <api-endpoint>${API_ENDPOINT}</api-endpoint>
  */
 
 // Create 'dist' directory if it doesn't exist

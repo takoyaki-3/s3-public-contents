@@ -171,9 +171,18 @@ export class S3PublicContentsStack extends cdk.Stack {
       ],
     });
 
-    // CloudFrontのドメイン名を出力
+    // 出力値の定義
     new cdk.CfnOutput(this, 'CloudFrontDomain', {
       value: distribution.domainName,
+      exportName: `${this.stackName}-CloudFrontDomain`,
+    });
+    new cdk.CfnOutput(this, 'ApiUrl', {
+      value: api.url,
+      exportName: `${this.stackName}-ApiUrl`,
+    });
+    new cdk.CfnOutput(this, 'BucketURL', {
+      value: bucket.bucketWebsiteUrl,
+      exportName: `${this.stackName}-BucketURL`,
     });
   }
 }

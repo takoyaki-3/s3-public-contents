@@ -15,36 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Pages
-        uses: actions/configure-pages@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 20
-      - name: Install dependencies
-        run: npm install
-      - name: Build
-        run: npm run build
-        env:
-          PUBLIC_URL: /s3-public-contents
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: './dist'
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        uses: actions/deploy-pages@v4
-
-  deploy-aws:
+  deployaws:
     runs-on: ubuntu-latest
     permissions:
       id-token: write
@@ -68,4 +39,44 @@ jobs:
         run: npm install
 
       - name: Deploy CDK stack
-        run: npx cdk deploy --require-approval never
+        run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
+
+      - name: Extract CDK outputs
+        id: cdk-outputs
+        run: |
+          echo "API_ENDPOINT=$(jq -r '.[].ApiUrl' cdk-outputs.json)" >> $GITHUB_OUTPUT
+          echo "S3_BUCKET_URL=$(jq -r '.[].BucketURL' cdk-outputs.json)" >> $GITHUB_OUTPUT
+          echo "CLOUDFRONT_URL=$(jq -r '.[].CloudFrontDomain' cdk-outputs.json)" >> $GITHUB_OUTPUT
+
+  build:
+    runs-on: ubuntu-latest
+    needs: deployaws
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Setup Pages
+        uses: actions/configure-pages@v3
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build
+        env:
+          PUBLIC_URL: /s3-public-contents
+          API_ENDPOINT: ${{ needs.deployaws.outputs.API_ENDPOINT }}
+          CLOUDFRONT_URL: ${{ needs.deployaws.outputs.CLOUDFRONT_URL }}
+          S3_BUCKET_URL: ${{ needs.deployaws.outputs.S3_BUCKET_URL }}
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist'
+
+  deploy-pages:
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
