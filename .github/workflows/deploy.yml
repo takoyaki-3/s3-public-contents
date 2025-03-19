@@ -69,6 +69,14 @@ jobs:
           API_ENDPOINT: ${{ needs.deployaws.outputs.API_ENDPOINT }}
           CLOUDFRONT_URL: ${{ needs.deployaws.outputs.CLOUDFRONT_URL }}
           S3_BUCKET_URL: ${{ needs.deployaws.outputs.S3_BUCKET_URL }}
+      - name: Debug
+        run: echo $API_ENDPOINT |
+              echo $CLOUDFRONT_URL |
+              echo $S3_BUCKET_URL
+        env:
+          API_ENDPOINT: ${{ needs.deployaws.outputs.API_ENDPOINT }}
+          CLOUDFRONT_URL: ${{ needs.deployaws.outputs.CLOUDFRONT_URL }}
+          S3_BUCKET_URL: ${{ needs.deployaws.outputs.S3_BUCKET_URL }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
