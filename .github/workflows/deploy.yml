@@ -53,21 +53,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      - name: Debug Secrets
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_ROLE_NAME: ${{ secrets.AWS_ROLE_NAME }}
-        run: |
-            echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
-            echo "AWS_ROLE_NAME=$AWS_ROLE_NAME"
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
-        env:
-          AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
-          AWS_ROLE_NAME: ${{ secrets.AWS_ROLE_NAME }}
         with:
-          role-to-assume: arn:aws:iam::${{ env.AWS_ACCOUNT_ID }}:role/${{ env.AWS_ROLE_NAME }}
+          role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/${{ secrets.AWS_ROLE_NAME }}
           aws-region: ap-northeast-1
 
       - name: Setup Node
