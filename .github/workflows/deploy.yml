@@ -2,7 +2,7 @@ name: Deploy GitHub Pages
 
 on:
   push:
-    branches: ['main']
+    branches: ["main"]
   workflow_dispatch:
 
 permissions:
@@ -11,7 +11,7 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
+  group: "pages"
   cancel-in-progress: true
 
 jobs:
@@ -20,6 +20,10 @@ jobs:
     permissions:
       id-token: write
       contents: read
+    outputs:
+      API_ENDPOINT: ${{ steps.cdk-outputs.outputs.API_ENDPOINT }}
+      S3_BUCKET_URL: ${{ steps.cdk-outputs.outputs.S3_BUCKET_URL }}
+      CLOUDFRONT_URL: ${{ steps.cdk-outputs.outputs.CLOUDFRONT_URL }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -71,8 +75,8 @@ jobs:
           S3_BUCKET_URL: ${{ needs.deployaws.outputs.S3_BUCKET_URL }}
       - name: Debug
         run: echo $API_ENDPOINT |
-              echo $CLOUDFRONT_URL |
-              echo $S3_BUCKET_URL
+          echo $CLOUDFRONT_URL |
+          echo $S3_BUCKET_URL
         env:
           API_ENDPOINT: ${{ needs.deployaws.outputs.API_ENDPOINT }}
           CLOUDFRONT_URL: ${{ needs.deployaws.outputs.CLOUDFRONT_URL }}
@@ -80,7 +84,7 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist'
+          path: "./dist"
 
   deploy-pages:
     runs-on: ubuntu-latest
