@@ -58,8 +58,8 @@ jobs:
           AWS_ACCOUNT_ID: ${{ secrets.AWS_ACCOUNT_ID }}
           AWS_ROLE_NAME: ${{ secrets.AWS_ROLE_NAME }}
         run: |
-            echo "AWS_ACCOUNT_ID=${{ env.AWS_ACCOUNT_ID }}"
-            echo "AWS_ROLE_NAME=${{ env.AWS_ROLE_NAME }}"
+            echo "AWS_ACCOUNT_ID=$AWS_ACCOUNT_ID"
+            echo "AWS_ROLE_NAME=$AWS_ROLE_NAME"
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
