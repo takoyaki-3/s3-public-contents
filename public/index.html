@@ -319,7 +319,7 @@
         // Fetch the API response from your actual endpoint
         const apiUrl = '${API_ENDPOINT}';
         statusElement.textContent = "Getting upload URL...";
-        const apiResponse = await fetch(apiUrl, {
+        const apiResponse = await fetch(`${apiUrl}/upload`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
