@@ -181,7 +181,7 @@ export class S3PublicContentsStack extends cdk.Stack {
       exportName: `${this.stackName}-ApiUrl`,
     });
     new cdk.CfnOutput(this, 'BucketURL', {
-      value: `${bucket.bucketName}.s3.dualstack.ap-northeast-1.amazonaws.com`,
+      value: `${bucket.bucketName}.s3.amazonaws.com`,
       exportName: `${this.stackName}-BucketURL`,
     });
   }
