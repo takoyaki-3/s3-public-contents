@@ -181,7 +181,7 @@ export class S3PublicContentsStack extends cdk.Stack {
       exportName: `${this.stackName}-ApiUrl`,
     });
     new cdk.CfnOutput(this, 'BucketURL', {
-      value: bucket.bucketWebsiteUrl,
+      value: bucket.bucketDualStackDomainName,
       exportName: `${this.stackName}-BucketURL`,
     });
   }
