@@ -416,8 +416,7 @@
         if (result.ok) {
           // Generate a file URL for the uploaded file (using bucket URL + key)
           const bucketUrl = uploadURL.split('?')[0];
-          fileUrl = bucketUrl;
-          fileUrl = fileUrl.replace('${S3_BUCKET_URL}', 'https://${CLOUDFRONT_URL}');
+          fileUrl = bucketUrl.replace('${S3_BUCKET_URL}', 'https://${CLOUDFRONT_URL}');
 
           statusElement.textContent = `アップロード成功!`;
           console.log("Upload successful");
