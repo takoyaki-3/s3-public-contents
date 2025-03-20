@@ -44,6 +44,8 @@ jobs:
 
       - name: Deploy CDK stack
         run: npx cdk deploy --require-approval never --outputs-file cdk-outputs.json
+        env:
+          ALLOWED_USERS: ${{ secrets.ALLOWED_USERS }}
 
       - name: Extract CDK outputs
         id: cdk-outputs
