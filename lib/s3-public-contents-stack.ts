@@ -116,6 +116,7 @@ export class S3PublicContentsStack extends cdk.Stack {
       code: signUrlLambdaCode,
       environment: {
         BUCKET_NAME: bucket.bucketName,
+        ALLOWED_USERS: process.env.ALLOWED_USERS || '',
         // FIREBASE_PROJECT_ID: 'your-firebase-project-id',
       },
       timeout: cdk.Duration.seconds(3),
