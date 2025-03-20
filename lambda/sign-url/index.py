@@ -34,6 +34,10 @@ def handler(event, context):
         'body': json.dumps({'message': 'Missing or empty key parameter'})
       }
 
+    # Add upload date prefix to the key
+    upload_date = datetime.now().strftime('%Y%m%d')
+    key = f"{upload_date}/{key}"
+
     # Firebaseトークン検証（オプション）
     if token:
       try:
