@@ -23,6 +23,9 @@ export class S3PublicContentsStack extends cdk.Stack {
 
     const bucket = new s3.Bucket(this, 'UploadBucket', {
       bucketName: `${prefix}-upload-bucket-${this.stackName}`.toLowerCase(),
+      websiteIndexDocument: 'index.html',
+      publicReadAccess: true,
+      blockPublicAccess: s3.BlockPublicAccess.BLOCK_ACLS,
       cors: [
         {
           allowedMethods: [s3.HttpMethods.GET, s3.HttpMethods.PUT, s3.HttpMethods.POST, s3.HttpMethods.DELETE, s3.HttpMethods.HEAD],
