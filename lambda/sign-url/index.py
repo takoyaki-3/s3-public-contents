@@ -9,6 +9,7 @@ from botocore.exceptions import ClientError
 
 s3 = boto3.client('s3')
 bucket_name = os.environ['BUCKET_NAME']
+allowed_users = os.environ['ALLOWED_USERS'].split(',')
 # FIREBASE_PROJECT_ID = os.environ['FIREBASE_PROJECT_ID']
 
 def handler(event, context):
@@ -34,16 +35,22 @@ def handler(event, context):
         'body': json.dumps({'message': 'Missing or empty key parameter'})
       }
 
-    # Add upload date prefix to the key
-    upload_date = datetime.now().strftime('%Y%m%d')
-    key = f"{upload_date}/{key}"
-
     # Firebaseトークン検証（オプション）
     if token:
       try:
         # トークン検証処理をここに実装
         decoded_token = verify_firebase_token(token)
         user_id = decoded_token.get('user_id')
+
+        if user_id in allowed_users:
+          pass
+        else:
+          return {
+            'statusCode': 401,
+            'body': json.dumps({
+              'error': 'User not allowed to upload files'
+            })
+          }
       except Exception as e:
         return {
           'statusCode': 401,
@@ -52,6 +59,11 @@ def handler(event, context):
             'details': str(e)
           })
         }
+
+    # Add upload date prefix to the key
+    upload_date = datetime.now().strftime('%Y%m%d')
+    key = f"{user_id}/{upload_date}/{key}"
+
     params = {
       'Bucket': bucket_name,
       'Key': key,
