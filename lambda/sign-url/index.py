@@ -16,7 +16,7 @@ def handler(event, context):
   """
   署名付きURLを発行するLambda関数ハンドラー
   """
-  print('Received event:', json.dumps(event, indent=2))
+  print('Received event:', json.dumps(event))
 
   try:
     body = json.loads(event['body'])
@@ -35,30 +35,36 @@ def handler(event, context):
         'body': json.dumps({'message': 'Missing or empty key parameter'})
       }
 
-    # Firebaseトークン検証（オプション）
-    if token:
-      try:
-        # トークン検証処理をここに実装
-        decoded_token = verify_firebase_token(token)
-        user_id = decoded_token.get('user_id')
+    if not token:
+      return {
+        'statusCode': 401,
+        'body': json.dumps({
+          'error': 'Missing authentication token'
+        })
+      }
 
-        if user_id in allowed_users:
-          pass
-        else:
-          return {
-            'statusCode': 401,
-            'body': json.dumps({
-              'error': 'User not allowed to upload files'
-            })
-          }
-      except Exception as e:
+    try:
+      # トークン検証処理をここに実装
+      decoded_token = verify_firebase_token(token)
+      user_id = decoded_token.get('user_id')
+
+      if user_id in allowed_users:
+        pass
+      else:
         return {
           'statusCode': 401,
           'body': json.dumps({
-            'error': 'Invalid authentication token',
-            'details': str(e)
+            'error': 'User not allowed to upload files'
           })
         }
+    except Exception as e:
+      return {
+        'statusCode': 401,
+        'body': json.dumps({
+          'error': 'Invalid authentication token',
+          'details': str(e)
+        })
+      }
 
     # Add upload date prefix to the key
     upload_date = datetime.now().strftime('%Y%m%d')
