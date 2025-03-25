@@ -112,14 +112,25 @@ def verify_firebase_token(token):
   """
   Firebaseトークンを検証する関数
   """
-  # 注: 本番環境では適切なFirebase Admin SDK実装に置き換えるべき
   try:
-    # トークンの検証（簡易実装）
-    decoded = jwt.decode(token, options={"verify_signature": False})
+    # 実際のFirebaseプロジェクトIDを環境変数から取得
+    project_id = os.environ.get('FIREBASE_PROJECT_ID')
+    if not project_id:
+      raise Exception("FIREBASE_PROJECT_ID environment variable is missing")
 
-    # # Firebaseプロジェクトの検証
-    # if decoded.get('aud') != FIREBASE_PROJECT_ID:
-    #     raise Exception("Invalid Firebase project")
+    # 公開鍵を取得して署名を検証
+    jwks_url = f'https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com'
+    jwks_client = jwt.PyJWKClient(jwks_url)
+    signing_key = jwks_client.get_signing_key_from_jwt(token)
+
+    # トークンの検証
+    decoded = jwt.decode(
+      token,
+      signing_key.key,
+      algorithms=["RS256"],
+      audience=project_id,
+      issuer=f'https://securetoken.google.com/{project_id}'
+    )
 
     # トークンの有効期限確認
     exp = decoded.get('exp', 0)
