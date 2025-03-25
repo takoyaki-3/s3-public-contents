@@ -95,13 +95,20 @@ export class S3PublicContentsStack extends cdk.Stack {
     const jwtLayer = createPythonLayer(
       'JwtLayer',
       'Layer containing the PyJWT library',
-      'PyJWT[crypto]==2.10.1'
+      'PyJWT==2.10.1'
     );
 
     const cryptographyLayer = createPythonLayer(
       'CryptographyLayer',
       'Layer containing the cryptography library',
       'cryptography==44.0.2'
+    );
+
+    // Firebase Admin SDK Layer
+    const firebaseAdminLayer = createPythonLayer(
+      'FirebaseAdminLayer',
+      'Layer containing Firebase Admin SDK',
+      'firebase-admin==6.6.0 google-auth==2.29.0'
     );
 
     // Lambda関数（署名付きURL発行）
@@ -122,7 +129,7 @@ export class S3PublicContentsStack extends cdk.Stack {
       timeout: cdk.Duration.seconds(3),
       architecture: lambda.Architecture.ARM_64,
       memorySize: 128,
-      layers: [requestsLayer, jwtLayer, cryptographyLayer],
+      layers: [requestsLayer, jwtLayer, cryptographyLayer, firebaseAdminLayer],
     });
     bucket.grantReadWrite(signUrlLambda);
 
