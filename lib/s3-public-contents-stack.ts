@@ -95,7 +95,7 @@ export class S3PublicContentsStack extends cdk.Stack {
     const jwtLayer = createPythonLayer(
       'JwtLayer',
       'Layer containing the PyJWT library',
-      'PyJWT==2.10.1'
+      'PyJWT[crypto]==2.10.1'
     );
 
     const cryptographyLayer = createPythonLayer(
@@ -137,42 +137,42 @@ export class S3PublicContentsStack extends cdk.Stack {
 
     const uploadResource = api.root.addResource('upload');
     uploadResource.addMethod('POST', new apigateway.LambdaIntegration(signUrlLambda, {
-      proxy: true,
-      integrationResponses: [
-        {
-          statusCode: '200',
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': "'*'",
+        proxy: true,
+        integrationResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
           },
-        },
-        {
-          statusCode: '500',
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': "'*'",
+          {
+            statusCode: '500',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': "'*'",
+            },
           },
+        ],
+        requestTemplates: {
+          'application/json': `{
+            "key": "$input.params('key')",
+            "expires": "$input.params('expires')"
+          }`,
         },
-      ],
-      requestTemplates: {
-        'application/json': `{
-          "key": "$input.params('key')",
-          "expires": "$input.params('expires')"
-        }`,
-      },
     }), {
-      methodResponses: [
-        {
-          statusCode: '200',
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': true,
+        methodResponses: [
+          {
+            statusCode: '200',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
           },
-        },
-        {
-          statusCode: '500',
-          responseParameters: {
-            'method.response.header.Access-Control-Allow-Origin': true,
+          {
+            statusCode: '500',
+            responseParameters: {
+              'method.response.header.Access-Control-Allow-Origin': true,
+            },
           },
-        },
-      ],
+        ],
     });
 
     // 出力値の定義

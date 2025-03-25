@@ -36,6 +36,7 @@ def handler(event, context):
       }
 
     if not token:
+      print('Missing authentication token')
       return {
         'statusCode': 401,
         'body': json.dumps({
@@ -51,6 +52,7 @@ def handler(event, context):
       if user_id in allowed_users:
         pass
       else:
+        print('User not allowed to upload files')
         return {
           'statusCode': 401,
           'body': json.dumps({
@@ -58,6 +60,7 @@ def handler(event, context):
           })
         }
     except Exception as e:
+      print('Invalid authentication token:', e)
       return {
         'statusCode': 401,
         'body': json.dumps({
@@ -80,6 +83,7 @@ def handler(event, context):
     signed_url = s3.generate_presigned_url('put_object', Params=params)
 
     # 成功レスポンス
+    print('Generated signed URL:', signed_url)
     return {
       'statusCode': 200,
       'headers': {
@@ -102,6 +106,7 @@ def handler(event, context):
     }
   except Exception as e:
     # エラーレスポンス
+    print('Internal server error:', e)
     return {
       'statusCode': 500,
       'headers': {
@@ -129,6 +134,9 @@ def verify_firebase_token(token):
     jwks_client = jwt.PyJWKClient(jwks_url)
     signing_key = jwks_client.get_signing_key_from_jwt(token)
 
+    print(f"Signing key: {signing_key.key}")
+    print(f"Token: {token}")
+
     # トークンの検証
     decoded = jwt.decode(
       token,
@@ -137,6 +145,8 @@ def verify_firebase_token(token):
       audience=project_id,
       issuer=f'https://securetoken.google.com/{project_id}'
     )
+
+    print(f"Decoded token: {decoded}")
 
     # トークンの有効期限確認
     exp = decoded.get('exp', 0)
