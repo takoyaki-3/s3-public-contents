@@ -125,6 +125,7 @@ export class S3PublicContentsStack extends cdk.Stack {
         BUCKET_NAME: bucket.bucketName,
         ALLOWED_USERS: process.env.ALLOWED_USERS || '',
         FIREBASE_PROJECT_ID: process.env.FIREBASE_PROJECT_ID || '',
+        FIREBASE_SERVICE_ACCOUNT_JSON: process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '',
       },
       timeout: cdk.Duration.seconds(3),
       architecture: lambda.Architecture.ARM_64,
